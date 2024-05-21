@@ -25,7 +25,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import numpy as np
 import cv2
 import filter
-from utils.image_utils import save_image, rotate_image, sobel_x, convolve2d
+from utils.image_utils import save_image, rotate_image, sobel_x, convolve2d, plot_subplot_images
 
 def generate_DoG_bank(n_orientations:int, sigmas:list, sizes:list) -> list:
     '''! Generates a collection of oriented DoG filters
@@ -40,7 +40,7 @@ def generate_DoG_bank(n_orientations:int, sigmas:list, sizes:list) -> list:
 
     DoG_bank = []
     for sigma, size in zip(sigmas, sizes):
-        gaussian_kernel = filter.generate_gaussian_kernel(size, sigma)
+        gaussian_kernel = filter.gaussian2d(size, sigma, sigma, 0, 0)
         DoG = convolve2d(gaussian_kernel, sobel_x())
         for i in range(n_orientations):
             angle = i * (360 / n_orientations)
@@ -56,12 +56,10 @@ def generate_LM_bank(size:int, n_orientations:int, DoG_sigmas:list, LoG_sigmas:l
     ## Generate first and second order derivates of Gaussian - Total: 36
     for order in orders:
         for sigma in DoG_sigmas:
-            gx = filter.gaussian_derivative(size, sigma, order)
-            gy = filter.gaussian_derivative(size, elongation_factor * sigma, order, axis=1)
-            g = gx * gy
+            gauss = filter.gaussian2d(size, 3* sigma, sigma, 0, order)
             for i in range(n_orientations):
                 angle = i * (360 / n_orientations)
-                LM_bank.append(rotate_image(g, angle))
+                LM_bank.append(rotate_image(gauss, angle))
 
     ## Generate LoG filters - Total: 8
     for sigma in LoG_sigmas:
@@ -77,7 +75,7 @@ def generate_LM_bank(size:int, n_orientations:int, DoG_sigmas:list, LoG_sigmas:l
     ## Generate Gaussian filters - Total: 4
     for sigma in Gauss_sigmas:
         LM_bank.append(
-            filter.generate_gaussian_kernel(size, sigma)
+            filter.gaussian2d(size, sigma, sigma, 0, 0)
         )
 
     return LM_bank
@@ -101,13 +99,20 @@ def main():
     Display all the filters in this filter bank and save image as LM.png,
     use command "cv2.imwrite(...)"
     """
-    LMS_bank = generate_LM_bank(33, 6, DoG_sigmas=[1, np.sqrt(2), 2],
+    LMS_bank = generate_LM_bank(49, 6, DoG_sigmas=[1, np.sqrt(2), 2],
                                 LoG_sigmas=[1, np.sqrt(2), np.sqrt(3), 2],
                                 Gauss_sigmas=[np.sqrt(2), 2, 2 * np.sqrt(2), 4])
     for n, img in enumerate(LMS_bank):
         save_image(img, "Phase1/LM_Filters", f'LM{n}.png')
-
     
+    import matplotlib.pyplot as plt
+    fig, axes = plt.subplots(nrows=4, ncols=12, figsize=(12, 4))
+    for i, ax in enumerate(axes.flat):
+        if i < len(LMS_bank):
+            ax.imshow(LMS_bank[i], cmap='gray')
+            ax.axis('off')
+    plt.show()
+
     """
     Generate Gabor Filter Bank: (Gabor)
     Display all the filters in this filter bank and save image as Gabor.png,

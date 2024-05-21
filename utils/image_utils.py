@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image
 import scipy.ndimage
+test = ()
 
 def plot_image(image, title=None) : 
     '''! Plot an image with matplotlib
@@ -18,6 +19,31 @@ def plot_image(image, title=None) :
     if title:
         plt.title(title)
     
+    plt.show()
+
+def plot_subplot_images(images, titles=None, cols=2):
+    """
+    Display a list of images in a subplot.
+
+    Parameters:
+    - images: List of np.array, each array representing an image.
+    - cols: Number of columns in the subplot grid.
+    """
+    n_images = len(images)
+    rows = (n_images + cols - 1) // cols  # Calculate number of rows needed
+
+    fig, axs = plt.subplots(rows, cols, figsize=(15, 5 * rows))
+    axs = axs.flatten()  # Flatten the array of axes for easy iteration
+
+    for i, img in enumerate(images):
+        axs[i].imshow(img, cmap='gray')
+        axs[i].axis('off')  # Hide the axis
+
+    # Turn off any unused subplots
+    for i in range(n_images, len(axs)):
+        fig.delaxes(axs[i])
+
+    plt.tight_layout()
     plt.show()
 
 def save_image(image, directory, path):
