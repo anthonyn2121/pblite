@@ -1,5 +1,5 @@
 import numpy as np
-
+from utils.image_utils import convolve2d
 
 def gaussian1d(x:np.array, sigma:int, order:int) -> np.array:
     ''' Generates 1st or 2nd derivative of the gaussian
@@ -60,10 +60,10 @@ def laplacian_of_gaussian(size:int, sigma:int) -> np.array:
 
     @return image mask
     '''
-    kernel = np.fromfunction(
-        lambda x, y: (x**2 + y**2 - 2 * sigma**2) * np.exp(-(x**2 + y**2) / (2 * sigma**2)),
-        (size, size)
-    )
-
-    kernel /= (2 * np.pi * sigma**6)
-    return kernel
+    kernel = np.array([[0, 1, 0],
+                      [1, -4, 1],
+                      [0, 1, 0]])
+    
+    g = gaussian2d(size, sigma, sigma, 0, 0)
+    log = convolve2d(g, kernel)
+    return log
