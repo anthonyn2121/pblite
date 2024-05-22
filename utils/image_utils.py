@@ -4,20 +4,19 @@ import matplotlib.pyplot as plt
 import matplotlib.image
 import scipy.ndimage
 
-def plot_image(image, title=None) : 
-    '''! Plot an image with matplotlib
+def plot_image(image, title=None, cmap=None) : 
+    ''' Plot an image with matplotlib
     
     @param image    An nd.array or PIL image
     @param title(optional)    Title of the image
     '''
-    if isinstance(image, np.array):
-        plt.imshow(image)
+    if isinstance(image, np.ndarray):
+        plt.imshow(image, cmap=cmap)
     else:
-        plt.imshow(np.asarray(image))
+        plt.imshow(np.asarray(image), cmap=cmap)
 
     if title:
         plt.title(title)
-    
     plt.show()
 
 def plot_subplot_images(images:list, title:str, nrows:int, ncols:int, figsize:tuple=(10, 10)):
@@ -33,7 +32,9 @@ def plot_subplot_images(images:list, title:str, nrows:int, ncols:int, figsize:tu
         if i < len(images):
             ax.imshow(images[i], cmap='gray')
             ax.axis('off')
+    fig.tight_layout()
     fig.savefig(title)
+    plt.close()
 
 def save_image(image, directory, path):
     if not os.path.exists(directory):
@@ -45,7 +46,6 @@ def save_image(image, directory, path):
 
 def rotate_image(image, angle):
     return scipy.ndimage.rotate(image, angle, reshape=False)
-
 
 def sobel_x() -> np.array:
     '''! Returns the sobel filter that when conlved with an image, is used to calculate the approximate

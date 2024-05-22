@@ -17,15 +17,53 @@ Code adapted from CMSC733 at the University of Maryland, College Park.
 import sys
 import os
 
+import sklearn.cluster
+
 # Add the parent directory to the Python path to be able to use utils directory
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 
 # Code starts here:
 import numpy as np
 import cv2
+import sklearn
 import filter
-from utils.image_utils import save_image, rotate_image, sobel_x, convolve2d, plot_subplot_images
+from utils.image_utils import save_image, plot_image, rotate_image, sobel_x, convolve2d, plot_subplot_images
+
+def convolve_image(image:np.array, filters:list) -> np.array:
+    ''' Convolve image 2d with list of filters
+
+    @param image    Np.array representation of image
+    @param filters  List of filters to convolve image with
+
+    @return masks  a (L x W x N) array where the depth of the array is one result of the convolved image
+    '''
+    masks = np.array(image)
+    for i, filter in enumerate(filters):
+        convolved_image = convolve2d(image, filter)
+        masks = np.dstack((masks, convolved_image))
+    return masks
+
+def half_circle_mask(size:tuple, radius:int) -> np.array:
+    ''' Generate semi-circle 'images' 
+    
+    @param size     Size of the NxN image
+    @param radius   Radius of the circle
+
+    @return The 'image' as an array
+    '''
+    length, width = size
+    center_x, center_y = length//2, width//2
+    ## Create array of distances from center
+    mask = np.fromfunction(
+        lambda x, y: np.sqrt((center_x - x)**2 + (center_y - y)**2),
+        shape=size 
+    )
+    ## Make mask binary depending on distance to radius - Creating circle
+    mask[mask <= radius] = 1
+    mask[mask >= radius] = 0
+    ## Cover half the mask to create a half circle
+    mask[:, :(width//2)] = 0
+    return mask 
 
 def generate_DoG_bank(n_orientations:int, sigmas:list, sizes:list) -> list:
     ''' Generates a collection of oriented DoG filters
@@ -67,7 +105,7 @@ def generate_LM_bank(size:int, n_orientations:int, DoG_sigmas:list, LoG_sigmas:l
     ## Generate first and second order derivates of Gaussian - Total: 36
     for order in orders:
         for sigma in DoG_sigmas:
-            gauss = filter.gaussian2d(size, 3* sigma, sigma, 0, order)
+            gauss = filter.gaussian2d(size, elongation_factor * sigma, sigma, 0, order)
             for i in range(n_orientations):
                 angle = i * (360 / n_orientations)
                 LM_bank.append(rotate_image(gauss, angle))
@@ -80,7 +118,7 @@ def generate_LM_bank(size:int, n_orientations:int, DoG_sigmas:list, LoG_sigmas:l
 
     for sigma in LoG_sigmas:
         LM_bank.append(
-            filter.laplacian_of_gaussian(size, 3 * sigma)
+            filter.laplacian_of_gaussian(size, elongation_factor * sigma)
         )
 
     ## Generate Gaussian filters - Total: 4
@@ -99,6 +137,31 @@ def generate_gabor_filters(size:int, n_orientations:int, sigmas:list, theta:floa
         for i in orientations:
             filters.append(rotate_image(g, i))
     return filters
+
+def generate_halfcircle_filters(size:list, n_orientations:int, radius:list):
+    filters = []
+    for s in size:
+        for r in radius:
+            for n in range(0, n_orientations):
+                mask = half_circle_mask((s, s), r)
+                angle = n * (360 / n_orientations)
+                filters.append(
+                    rotate_image(mask, angle)
+                )
+    return filters
+
+def generate_texton_map(image:np.array, filters:list, clusters:int):
+    masks = convolve_image(image, filters)
+    print("Shape of masks: ", masks.shape)
+    length, width = image.shape
+    tex = masks.reshape(((length*width),masks.shape[2]))
+    print('After reshape: ', tex.shape)
+    kmeans = sklearn.cluster.KMeans(n_clusters=clusters, n_init='auto')
+    kmeans.fit(tex)
+    map = kmeans.predict(tex)
+    print("MAP DONE")
+    map = np.reshape(map, (length, width))
+    return map
 
 def main():
 
@@ -134,7 +197,7 @@ def main():
     Display all the filters in this filter bank and save image as Gabor.png,
     use command "cv2.imwrite(...)"
     """
-    gabor_bank = generate_gabor_filters(49, 40, [3,5,7,9,12], theta = 0.25, Lambda = 1, psi = 1, gamma = 1)
+    gabor_bank = generate_gabor_filters(49, 40, [3,5,7], theta = 0.25, Lambda = 1, psi = 1, gamma = 1)
     plot_subplot_images(gabor_bank, 'Phase1/Gabor_Filters/GB.png', nrows=5, ncols=8, figsize=(7, 7))
     
     """
@@ -142,14 +205,26 @@ def main():
     Display all the Half-disk masks and save image as HDMasks.png,
     use command "cv2.imwrite(...)"
     """
+    halfcircle_bank = generate_halfcircle_filters(size=[10, 30, 50], n_orientations=5, radius=[3, 10, 14])
+    for n, img in enumerate(halfcircle_bank):
+        save_image(img, "Phase1/HalfCircle_Filters", f'HCM{n}.png')
 
-
-
+    image = cv2.imread('Phase1/BSDS500/Images/1.jpg', cv2.IMREAD_GRAYSCALE)
+    # plot_image(image, cmap='gray')
     """
     Generate Texton Map
     Filter image using oriented gaussian filter bank
     """
+    # filter_bank = DoG_Bank + LMS_bank + LML_bank + gabor_bank
 
+    filter_bank = DoG_Bank + LMS_bank + gabor_bank
+    masks = convolve_image(image, filters=filter_bank)
+    np.save('filter_bank.npy', np.array(filter_bank, dtype=object), allow_pickle=True)
+    
+
+    tg = generate_texton_map(image, filter_bank, 64)
+    tg = 3 * tg
+    plot_image(tg, cmap='gist_rainbow')
 
     """
     Generate texture ID's using K-means clustering

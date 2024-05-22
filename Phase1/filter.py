@@ -43,8 +43,8 @@ def gaussian2d(size:int, sigma_x:int, sigma_y:int, dx:int, dy:int) -> np.array:
 
     @return image mask
     '''
-    x, y = np.meshgrid(np.linspace(-size//2, size//2, size),
-                       np.linspace(-size//2, size//2, size))
+    x, y = np.meshgrid(np.linspace(-size//2, size//2, size, dtype='float32'),
+                       np.linspace(-size//2, size//2, size, dtype='float32'))
     x = x.flatten()
     y = y.flatten()
     gx = gaussian1d(x, sigma_x, dx)
