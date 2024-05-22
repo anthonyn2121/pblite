@@ -3,7 +3,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image
 import scipy.ndimage
-test = ()
 
 def plot_image(image, title=None) : 
     '''! Plot an image with matplotlib
@@ -21,7 +20,7 @@ def plot_image(image, title=None) :
     
     plt.show()
 
-def plot_subplot_images(images, titles=None, cols=2):
+def plot_subplot_images(images:list, title:str, nrows:int, ncols:int, figsize:tuple=(10, 10)):
     """
     Display a list of images in a subplot.
 
@@ -29,22 +28,12 @@ def plot_subplot_images(images, titles=None, cols=2):
     - images: List of np.array, each array representing an image.
     - cols: Number of columns in the subplot grid.
     """
-    n_images = len(images)
-    rows = (n_images + cols - 1) // cols  # Calculate number of rows needed
-
-    fig, axs = plt.subplots(rows, cols, figsize=(15, 5 * rows))
-    axs = axs.flatten()  # Flatten the array of axes for easy iteration
-
-    for i, img in enumerate(images):
-        axs[i].imshow(img, cmap='gray')
-        axs[i].axis('off')  # Hide the axis
-
-    # Turn off any unused subplots
-    for i in range(n_images, len(axs)):
-        fig.delaxes(axs[i])
-
-    plt.tight_layout()
-    plt.show()
+    fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=figsize)
+    for i, ax in enumerate(axes.flat):
+        if i < len(images):
+            ax.imshow(images[i], cmap='gray')
+            ax.axis('off')
+    fig.savefig(title)
 
 def save_image(image, directory, path):
     if not os.path.exists(directory):

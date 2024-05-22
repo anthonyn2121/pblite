@@ -28,7 +28,7 @@ import filter
 from utils.image_utils import save_image, rotate_image, sobel_x, convolve2d, plot_subplot_images
 
 def generate_DoG_bank(n_orientations:int, sigmas:list, sizes:list) -> list:
-    '''! Generates a collection of oriented DoG filters
+    ''' Generates a collection of oriented DoG filters
 
     @param n_orientations   Number of orientations that the DoG filter will be rotated
     @param sigmas           List of sigma values to include in the calculation of the gaussian kernel
@@ -49,6 +49,17 @@ def generate_DoG_bank(n_orientations:int, sigmas:list, sizes:list) -> list:
 
 
 def generate_LM_bank(size:int, n_orientations:int, DoG_sigmas:list, LoG_sigmas:list, Gauss_sigmas:list):
+    ''' Generate a filter bank composed of Derivative of Gaussian(DoG), Laplacian of Gaussian(LoG),
+        and regular Gaussian filters.
+
+    @param size                 Size of all NxN kernels
+    @param n_orientations       Number of orientations to rotate the DoG filters
+    @param DoG_sigmas           Sigma values used for various DoG filters
+    @param LoG_sigmas           Sigma values used for various LoG filtes
+    @param Gauss_sigmas         Sigma values used for various Gaussian filters
+
+    @return List fo np.arrays that describe the filters
+    '''
     LM_bank = []
     orders = [1, 2]
     elongation_factor = 3
@@ -80,6 +91,15 @@ def generate_LM_bank(size:int, n_orientations:int, DoG_sigmas:list, LoG_sigmas:l
 
     return LM_bank
 
+def generate_gabor_filters(size:int, n_orientations:int, sigmas:list, theta:float, Lambda:int, psi:int, gamma:int) -> list:
+    filters = []
+    orientations = np.linspace(90, 270, n_orientations)
+    for sigma in sigmas:
+        g = filter.gabor(sigma, theta, Lambda, psi, gamma)
+        for i in orientations:
+            filters.append(rotate_image(g, i))
+    return filters
+
 def main():
 
     """
@@ -102,24 +122,21 @@ def main():
     LMS_bank = generate_LM_bank(49, 6, DoG_sigmas=[1, np.sqrt(2), 2],
                                 LoG_sigmas=[1, np.sqrt(2), np.sqrt(3), 2],
                                 Gauss_sigmas=[np.sqrt(2), 2, 2 * np.sqrt(2), 4])
-    for n, img in enumerate(LMS_bank):
-        save_image(img, "Phase1/LM_Filters", f'LM{n}.png')
+    plot_subplot_images(LMS_bank, 'Phase1/LM_Filters/LMS.png', 12, 4, (12, 4))
     
-    import matplotlib.pyplot as plt
-    fig, axes = plt.subplots(nrows=4, ncols=12, figsize=(12, 4))
-    for i, ax in enumerate(axes.flat):
-        if i < len(LMS_bank):
-            ax.imshow(LMS_bank[i], cmap='gray')
-            ax.axis('off')
-    plt.show()
+    LML_bank = generate_LM_bank(49, 6, DoG_sigmas=[np.sqrt(2), 2, 2 * np.sqrt(2)],
+                                LoG_sigmas=[2, 2*np.sqrt(2), 2 * np.sqrt(3), 4],
+                                Gauss_sigmas=2 * np.array([np.sqrt(2), 2, 2 * np.sqrt(2), 4]))
+    plot_subplot_images(LML_bank, 'Phase1/LM_Filters/LML.png', 12, 4, (12, 4))
 
     """
     Generate Gabor Filter Bank: (Gabor)
     Display all the filters in this filter bank and save image as Gabor.png,
     use command "cv2.imwrite(...)"
     """
-
-
+    gabor_bank = generate_gabor_filters(49, 40, [3,5,7,9,12], theta = 0.25, Lambda = 1, psi = 1, gamma = 1)
+    plot_subplot_images(gabor_bank, 'Phase1/Gabor_Filters/GB.png', nrows=5, ncols=8, figsize=(7, 7))
+    
     """
     Generate Half-disk masks
     Display all the Half-disk masks and save image as HDMasks.png,
