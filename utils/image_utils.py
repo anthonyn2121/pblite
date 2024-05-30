@@ -92,4 +92,4 @@ def convolve2d(image:np.array, filter:np.array) -> np.array:
             output[i, j] = np.sum(region * filter)
     
     return output
-
+    # return scipy.ndimage.convolve(image, filter, mode='constant', cval=0.0)

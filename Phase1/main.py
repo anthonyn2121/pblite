@@ -85,7 +85,6 @@ def generate_DoG_bank(n_orientations:int, sigmas:list, sizes:list) -> list:
             DoG_bank.append(rotate_image(DoG, angle))
     return DoG_bank
 
-
 def generate_LM_bank(size:int, n_orientations:int, DoG_sigmas:list, LoG_sigmas:list, Gauss_sigmas:list):
     ''' Generate a filter bank composed of Derivative of Gaussian(DoG), Laplacian of Gaussian(LoG),
         and regular Gaussian filters.
@@ -150,18 +149,42 @@ def generate_halfcircle_filters(size:list, n_orientations:int, radius:list):
                 )
     return filters
 
-def generate_texton_map(image:np.array, filters:list, clusters:int):
-    masks = convolve_image(image, filters)
-    print("Shape of masks: ", masks.shape)
+def generate_texton_map(image:np.array, filters:np.array, clusters:int):
     length, width = image.shape
-    tex = masks.reshape(((length*width),masks.shape[2]))
-    print('After reshape: ', tex.shape)
+    tex = filters.reshape(((length*width), filters.shape[2]))
     kmeans = sklearn.cluster.KMeans(n_clusters=clusters, n_init='auto')
     kmeans.fit(tex)
     map = kmeans.predict(tex)
-    print("MAP DONE")
     map = np.reshape(map, (length, width))
     return map
+
+def generate_brightness_map(image:np.array, clusters:int):
+    length, width = image.shape
+    bg = image.reshape((length*width, 1))
+    kmeans = sklearn.cluster.KMeans(n_clusters=clusters, n_init='auto')
+    kmeans.fit(bg)
+    map = kmeans.predict(bg)
+    return map.reshape((length, width))
+
+def generate_color_map(image:np.array, clusters:int):
+    length, width, depth = image.shape
+    cg =  image.reshape((length*width, depth))
+    kmeans = sklearn.cluster.KMeans(n_clusters=clusters, n_init='auto')
+    kmeans.fit(cg)
+    map = kmeans.predict(cg)
+    return map.reshape((length, width))
+    
+
+def chi_square_dist(map, bins):
+    chi_sqr_dist= map * 0
+    for i in range(0, len(bins)-1):
+        tmp = np.zeros(map.shape)
+        tmp[map == i] = 1
+        gi = cv2.filter2D(tmp, -1, kernel=np.float32(bin[i]))
+        hi = cv2.filter2D(tmp, -1, kernel=np.float32(bin[i+1]))
+
+        chi_sqr_dist += (0.5 * ((gi - hi)**2 / (gi + hi + 0.0001)))
+    return chi_sqr_dist
 
 def main():
 
@@ -209,43 +232,29 @@ def main():
     for n, img in enumerate(halfcircle_bank):
         save_image(img, "Phase1/HalfCircle_Filters", f'HCM{n}.png')
 
-    image = cv2.imread('Phase1/BSDS500/Images/1.jpg', cv2.IMREAD_GRAYSCALE)
-    # plot_image(image, cmap='gray')
+    image = cv2.imread('Phase1/BSDS500/Images/1.jpg', cv2.IMREAD_COLOR)
+    gray_image = cv2.imread('Phase1/BSDS500/Images/1.jpg', cv2.IMREAD_GRAYSCALE)
+
     """
     Generate Texton Map
     Filter image using oriented gaussian filter bank
     """
     # filter_bank = DoG_Bank + LMS_bank + LML_bank + gabor_bank
-
     filter_bank = DoG_Bank + LMS_bank + gabor_bank
-    masks = convolve_image(image, filters=filter_bank)
-    np.save('filter_bank.npy', np.array(filter_bank, dtype=object), allow_pickle=True)
-    
-
-    tg = generate_texton_map(image, filter_bank, 64)
-    tg = 3 * tg
-    plot_image(tg, cmap='gist_rainbow')
-
-    """
-    Generate texture ID's using K-means clustering
-    Display texton map and save image as TextonMap_ImageName.png,
-    use command "cv2.imwrite('...)"
-    """
-
-
-    """
-    Generate Texton Gradient (Tg)
-    Perform Chi-square calculation on Texton Map
-    Display Tg and save image as Tg_ImageName.png,
-    use command "cv2.imwrite(...)"
-    """
-
+    masks = convolve_image(gray_image, filters=filter_bank)
+    # np.save('filter_bank.npy', np.array(filter_bank, dtype=object), allow_pickle=True)
+    t_map = generate_texton_map(gray_image, masks, 48)
+    t_map = 3 * t_map
+    print('Generated texture map')
+    plot_image(t_map, cmap='gist_rainbow')
 
     """
     Generate Brightness Map
     Perform brightness binning 
     """
-
+    b_map = generate_brightness_map(gray_image, 16) 
+    print('Generated brightness map')
+    plot_image(b_map, cmap='gray')
 
     """
     Generate Brightness Gradient (Bg)
@@ -253,21 +262,14 @@ def main():
     Display Bg and save image as Bg_ImageName.png,
     use command "cv2.imwrite(...)"
     """
-
-
-    """
-    Generate Color Map
-    Perform color binning or clustering
-    """
-
+    c_map = generate_color_map(image, 16)
+    print('Generated color map') 
+    plot_image(c_map)
 
     """
-    Generate Color Gradient (Cg)
-    Perform Chi-square calculation on Color Map
-    Display Cg and save image as Cg_ImageName.png,
-    use command "cv2.imwrite(...)"
+    Perform Chi-square calculation on image
     """
-
+    
 
     """
     Read Sobel Baseline
