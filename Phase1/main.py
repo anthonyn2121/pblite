@@ -141,11 +141,14 @@ def generate_halfcircle_filters(size:list, n_orientations:int, radius:list):
     filters = []
     for s in size:
         for r in radius:
-            for n in range(0, n_orientations):
+            for n in range(0, n_orientations//2):
                 mask = half_circle_mask((s, s), r)
                 angle = n * (360 / n_orientations)
                 filters.append(
                     rotate_image(mask, angle)
+                )
+                filters.append(
+                    rotate_image(mask, angle + 180)
                 )
     return filters
 
@@ -174,17 +177,25 @@ def generate_color_map(image:np.array, clusters:int):
     map = kmeans.predict(cg)
     return map.reshape((length, width))
     
-
-def chi_square_dist(map, bins):
-    chi_sqr_dist= map * 0
-    for i in range(0, len(bins)-1):
+def chi_square_dist(map, n_bins, left_mask, right_mask):
+    chi_sqr_dist = np.zeros(map.shape)
+    for i in range(0, n_bins):
         tmp = np.zeros(map.shape)
         tmp[map == i] = 1
-        gi = cv2.filter2D(tmp, -1, kernel=np.float32(bin[i]))
-        hi = cv2.filter2D(tmp, -1, kernel=np.float32(bin[i+1]))
+        gi = cv2.filter2D(tmp, -1, kernel=left_mask)
+        hi = cv2.filter2D(tmp, -1, kernel=right_mask)
+        
+        chi_sqr_dist += ((gi - hi)**2 / (gi + hi + 0.0001))
+    return chi_sqr_dist/2
 
-        chi_sqr_dist += (0.5 * ((gi - hi)**2 / (gi + hi + 0.0001)))
-    return chi_sqr_dist
+def gradient(map, n_bins, hdmasks):
+    i = 0
+    gradient = np.array(map)
+    while i < len(hdmasks) - 1:
+        g = chi_square_dist(map, n_bins, hdmasks[i], hdmasks[i+1])
+        gradient = np.dstack((gradient, g))
+        i += 2
+    return np.mean(gradient, axis=2)
 
 def main():
 
@@ -246,7 +257,7 @@ def main():
     t_map = generate_texton_map(gray_image, masks, 48)
     t_map = 3 * t_map
     print('Generated texture map')
-    plot_image(t_map, cmap='gist_rainbow')
+    # plot_image(t_map, cmap='gist_rainbow')
 
     """
     Generate Brightness Map
@@ -254,7 +265,7 @@ def main():
     """
     b_map = generate_brightness_map(gray_image, 16) 
     print('Generated brightness map')
-    plot_image(b_map, cmap='gray')
+    # plot_image(b_map, cmap='gray')
 
     """
     Generate Brightness Gradient (Bg)
@@ -264,12 +275,18 @@ def main():
     """
     c_map = generate_color_map(image, 16)
     print('Generated color map') 
-    plot_image(c_map)
+    # plot_image(c_map)
 
     """
     Perform Chi-square calculation on image
     """
-    
+    # tg = gradient(t_map, 48, halfcircle_bank)
+    bg = gradient(t_map, 16, halfcircle_bank)
+    plot_image(bg)
+    # cg = gradient(t_map, 16, half_circle_mask)
+
+    # sobel_baseline = cv2.imread('Phase1/BSDS500/SobelBaseline/1.jpg ')
+    # canny_baseline = cv2.imread('Phase1/BSDS500/CannyBaseline/1.jpg ')
 
     """
     Read Sobel Baseline
