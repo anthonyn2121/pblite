@@ -249,6 +249,7 @@ def main():
     for n, img in enumerate(halfcircle_bank):
         save_image(img, "Phase1/HalfCircle_Filters", f'HCM{n}.png')
 
+    i = 1
     image = cv2.imread('Phase1/BSDS500/Images/1.jpg', cv2.IMREAD_COLOR)
     gray_image = cv2.imread('Phase1/BSDS500/Images/1.jpg', cv2.IMREAD_GRAYSCALE)
 
@@ -258,8 +259,11 @@ def main():
     """
     # filter_bank = DoG_Bank + LMS_bank + LML_bank + gabor_bank
     filter_bank = DoG_Bank + LMS_bank + gabor_bank
-    masks = convolve_image(gray_image, filters=filter_bank)
-    # np.save('filter_bank.npy', np.array(filter_bank, dtype=object), allow_pickle=True)
+    if not os.path.isfile(f'Phase1/data/masks{i}.npy'):
+        masks = convolve_image(gray_image, filters=filter_bank)
+        np.save(f'Phase1/data/masks{i}.npy', masks, allow_pickle=True)
+    elif os.path.isfile(f'Phase1/data/masks{i}.npy'):
+        masks = np.load(f'Phase1/data/masks{i}.npy', allow_pickle=True)
     t_map = generate_texton_map(gray_image, masks, 48)
     t_map = 3 * t_map
     print('Generated texture map')
