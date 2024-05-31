@@ -240,53 +240,39 @@ def main():
     for n, img in enumerate(halfcircle_bank):
         save_image(img, "Phase1/HalfCircle_Filters", f'HCM{n}.png')
 
-    i = 1
-    image = cv2.imread(f'Phase1/BSDS500/Images/{i}.jpg', cv2.IMREAD_COLOR)
-    gray_image = cv2.imread(f'Phase1/BSDS500/Images/{i}.jpg', cv2.IMREAD_GRAYSCALE)
+    # i = 2
+    for i in range(1, 11):
+        image = cv2.imread(f'Phase1/BSDS500/Images/{i}.jpg', cv2.IMREAD_COLOR)
+        gray_image = cv2.imread(f'Phase1/BSDS500/Images/{i}.jpg', cv2.IMREAD_GRAYSCALE)
 
-    if not os.path.isfile(f'Phase1/data/masks{i}.npy'):
-        filter_bank = generate_filter_bank()
-        masks = convolve_image(gray_image, filters=filter_bank)
-        np.save(f'Phase1/data/masks{i}.npy', masks, allow_pickle=True)
-    elif os.path.isfile(f'Phase1/data/masks{i}.npy'):
-        masks = np.load(f'Phase1/data/masks{i}.npy', allow_pickle=True)
+        if not os.path.isfile(f'Phase1/data/masks{i}.npy'):
+            filter_bank = generate_filter_bank()
+            masks = convolve_image(gray_image, filters=filter_bank)
+            np.save(f'Phase1/data/masks{i}.npy', masks, allow_pickle=True)
+        elif os.path.isfile(f'Phase1/data/masks{i}.npy'):
+            masks = np.load(f'Phase1/data/masks{i}.npy', allow_pickle=True)
 
-    t_map = generate_texton_map(gray_image, masks, 48)
-    t_map = 3 * t_map
-    print('Generated texture map')
+        t_map = generate_texton_map(gray_image, masks, 48)
+        t_map = 3 * t_map
 
-    """
-    Generate Brightness Map
-    Perform brightness binning 
-    """
-    b_map = generate_brightness_map(gray_image, 16) 
-    print('Generated brightness map')
+        b_map = generate_brightness_map(gray_image, 16) 
 
-    """
-    Generate Brightness Gradient (Bg)
-    Perform Chi-square calculation on Brightness Map
-    Display Bg and save image as Bg_ImageName.png,
-    use command "cv2.imwrite(...)"
-    """
-    c_map = generate_color_map(image, 16)
-    print('Generated color map') 
+        c_map = generate_color_map(image, 16)
 
-    """
-    Perform Chi-square calculation on image
-    """
-    tg = gradient(t_map, 64, halfcircle_bank)
-    save_image(tg, 'Phase1/results', f'texture_gradient{i}.png')
-    bg = gradient(b_map, 8, halfcircle_bank)
-    save_image(bg, 'Phase1/results', f'brightness_gradient{i}.png')
-    cg = gradient(c_map, 8, halfcircle_bank)
-    save_image(cg, 'Phase1/results', f'color_gradient{i}.png')
+        tg = gradient(t_map, 64, halfcircle_bank)
+        save_image(tg, 'Phase1/results', f'texture_gradient{i}.png')
+        bg = gradient(b_map, 8, halfcircle_bank)
+        save_image(bg, 'Phase1/results', f'brightness_gradient{i}.png')
+        cg = gradient(c_map, 8, halfcircle_bank)
+        save_image(cg, 'Phase1/results', f'color_gradient{i}.png')
 
-    sobel_baseline = cv2.imread(f'Phase1/BSDS500/SobelBaseline/{i}.png', cv2.IMREAD_GRAYSCALE)
-    canny_baseline = cv2.imread(f'Phase1/BSDS500/CannyBaseline/{i}.png', cv2.IMREAD_GRAYSCALE)
+        sobel_baseline = cv2.imread(f'Phase1/BSDS500/SobelBaseline/{i}.png', cv2.IMREAD_GRAYSCALE)
+        canny_baseline = cv2.imread(f'Phase1/BSDS500/CannyBaseline/{i}.png', cv2.IMREAD_GRAYSCALE)
 
-    output = np.multiply((tg + bg + cg)/3, (0.5 * canny_baseline + 0.5 * sobel_baseline)) 
-    save_image(output, 'Phase1/results/', f'output{i}.png')
-    
+        output = np.multiply((tg + bg + cg)/3, (0.5 * canny_baseline + 0.5 * sobel_baseline)) 
+        save_image(output, 'Phase1/results/', f'output{i}.png')
+        print(f'Output generated for image {i}')    
+
 if __name__ == '__main__':
     main()
  
