@@ -131,25 +131,25 @@ def generate_filter_bank():
     DoG_Bank = generate_DoG_bank(orientations, sigmas, sizes)
     ## Save images
     # for n, img in enumerate(DoG_Bank):
-    #     save_image(img, "Phase1/DoG_Filters", f'DoG{n}.png')
+    #     save_image(img, "DoG_Filters", f'DoG{n}.png')
 
     # Generate Leung-Malik Filter Bank: (LM)
     LMS_bank = generate_LM_bank(49, 6, DoG_sigmas=[1, np.sqrt(2), 2],
                                 LoG_sigmas=[1, np.sqrt(2), np.sqrt(3), 2],
                                 Gauss_sigmas=[np.sqrt(2), 2, 2 * np.sqrt(2), 4])
     ## Save images
-    # plot_subplot_images(LMS_bank, 'Phase1/LM_Filters/LMS.png', 12, 4, (12, 4))
+    # plot_subplot_images(LMS_bank, 'LM_Filters/LMS.png', 12, 4, (12, 4))
     
     # LML_bank = generate_LM_bank(49, 6, DoG_sigmas=[np.sqrt(2), 2, 2 * np.sqrt(2)],
     #                             LoG_sigmas=[2, 2*np.sqrt(2), 2 * np.sqrt(3), 4],
     #                             Gauss_sigmas=2 * np.array([np.sqrt(2), 2, 2 * np.sqrt(2), 4]))
     ## Save images
-    # plot_subplot_images(LML_bank, 'Phase1/LM_Filters/LML.png', 12, 4, (12, 4))
+    # plot_subplot_images(LML_bank, 'LM_Filters/LML.png', 12, 4, (12, 4))
 
     # Generate Gabor Filter Bank: (Gabor)
     gabor_bank = generate_gabor_filters(49, 40, [3,5,7], theta = 0.25, Lambda = 1, psi = 1, gamma = 1)
     ## Save images
-    # plot_subplot_images(gabor_bank, 'Phase1/Gabor_Filters/GB.png', nrows=5, ncols=8, figsize=(7, 7))
+    # plot_subplot_images(gabor_bank, 'Gabor_Filters/GB.png', nrows=5, ncols=8, figsize=(7, 7))
 
     filter_bank = DoG_Bank + LMS_bank + gabor_bank
     return filter_bank
@@ -224,19 +224,19 @@ def gradient(map, n_bins, hdmasks):
 def main():
     halfcircle_bank = generate_halfcircle_filters(scales=[3, 10, 14])
     for n, img in enumerate(halfcircle_bank):
-        save_image(img, "Phase1/HalfCircle_Filters", f'HCM{n}.png')
+        save_image(img, "HalfCircle_Filters", f'HCM{n}.png')
 
     # i = 2
     for i in range(1, 11):
-        image = cv2.imread(f'Phase1/BSDS500/Images/{i}.jpg', cv2.IMREAD_COLOR)
-        gray_image = cv2.imread(f'Phase1/BSDS500/Images/{i}.jpg', cv2.IMREAD_GRAYSCALE)
+        image = cv2.imread(f'BSDS500/Images/{i}.jpg', cv2.IMREAD_COLOR)
+        gray_image = cv2.imread(f'BSDS500/Images/{i}.jpg', cv2.IMREAD_GRAYSCALE)
 
-        if not os.path.isfile(f'Phase1/data/masks{i}.npy'):
+        if not os.path.isfile(f'data/masks{i}.npy'):
             filter_bank = generate_filter_bank()
             masks = convolve_image(gray_image, filters=filter_bank)
-            np.save(f'Phase1/data/masks{i}.npy', masks, allow_pickle=True)
-        elif os.path.isfile(f'Phase1/data/masks{i}.npy'):
-            masks = np.load(f'Phase1/data/masks{i}.npy', allow_pickle=True)
+            np.save(f'data/masks{i}.npy', masks, allow_pickle=True)
+        elif os.path.isfile(f'data/masks{i}.npy'):
+            masks = np.load(f'data/masks{i}.npy', allow_pickle=True)
 
         t_map = generate_texton_map(gray_image, masks, 48)
         t_map = 3 * t_map
@@ -246,17 +246,17 @@ def main():
         c_map = generate_color_map(image, 16)
 
         tg = gradient(t_map, 64, halfcircle_bank)
-        save_image(tg, 'Phase1/results', f'texture_gradient{i}.png')
+        save_image(tg, 'results', f'texture_gradient{i}.png')
         bg = gradient(b_map, 8, halfcircle_bank)
-        save_image(bg, 'Phase1/results', f'brightness_gradient{i}.png')
+        save_image(bg, 'results', f'brightness_gradient{i}.png')
         cg = gradient(c_map, 8, halfcircle_bank)
-        save_image(cg, 'Phase1/results', f'color_gradient{i}.png')
+        save_image(cg, 'results', f'color_gradient{i}.png')
 
-        sobel_baseline = cv2.imread(f'Phase1/BSDS500/SobelBaseline/{i}.png', cv2.IMREAD_GRAYSCALE)
-        canny_baseline = cv2.imread(f'Phase1/BSDS500/CannyBaseline/{i}.png', cv2.IMREAD_GRAYSCALE)
+        sobel_baseline = cv2.imread(f'BSDS500/SobelBaseline/{i}.png', cv2.IMREAD_GRAYSCALE)
+        canny_baseline = cv2.imread(f'BSDS500/CannyBaseline/{i}.png', cv2.IMREAD_GRAYSCALE)
 
         output = np.multiply((tg + bg + cg)/3, (0.5 * canny_baseline + 0.5 * sobel_baseline)) 
-        save_image(output, 'Phase1/results/', f'output{i}.png')
+        save_image(output, 'results/', f'output{i}.png')
         print(f'Output generated for image {i}')    
 
 if __name__ == '__main__':
