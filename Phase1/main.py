@@ -137,20 +137,26 @@ def generate_gabor_filters(size:int, n_orientations:int, sigmas:list, theta:floa
             filters.append(rotate_image(g, i))
     return filters
 
-def generate_halfcircle_filters(size:list, n_orientations:int, radius:list):
-    filters = []
-    for s in size:
-        for r in radius:
-            for n in range(0, n_orientations//2):
-                mask = half_circle_mask((s, s), r)
-                angle = n * (360 / n_orientations)
-                filters.append(
-                    rotate_image(mask, angle)
-                )
-                filters.append(
-                    rotate_image(mask, angle + 180)
-                )
-    return filters
+def generate_halfcircle_filters(size:list, n_orientations:int, scales:list):
+    half_discs = []
+    angles = [0, 180, 30, 210, 45, 225, 60, 240, 90, 270, 120, 300, 135, 315, 150, 330]           #rotation angles (not equally spaced)
+    no_of_disc = len(angles)
+    for radius in scales:
+        kernel_size = 2*radius + 1
+        cc = radius
+        kernel = np.zeros([kernel_size, kernel_size])
+        for i in range(radius):
+            for j in range(kernel_size):
+                a = (i-cc)**2 + (j-cc)**2                                     #to create one disc
+                if a <= radius**2:
+                    kernel[i,j] = 1
+        
+        for i in range(0, no_of_disc):                                       #rotate to make other discs
+            mask = rotate_image(kernel, angles[i])
+            mask[mask<=0.5] = 0
+            mask[mask>0.5] = 1
+            half_discs.append(mask)
+    return half_discs
 
 def generate_texton_map(image:np.array, filters:np.array, clusters:int):
     length, width = image.shape
@@ -239,7 +245,7 @@ def main():
     Display all the Half-disk masks and save image as HDMasks.png,
     use command "cv2.imwrite(...)"
     """
-    halfcircle_bank = generate_halfcircle_filters(size=[10, 30, 50], n_orientations=5, radius=[3, 10, 14])
+    halfcircle_bank = generate_halfcircle_filters(size=[10, 45, 50], n_orientations=16, scales=[3, 10, 14])
     for n, img in enumerate(halfcircle_bank):
         save_image(img, "Phase1/HalfCircle_Filters", f'HCM{n}.png')
 
@@ -280,14 +286,18 @@ def main():
     """
     Perform Chi-square calculation on image
     """
-    # tg = gradient(t_map, 48, halfcircle_bank)
-    bg = gradient(t_map, 16, halfcircle_bank)
-    plot_image(bg)
-    # cg = gradient(t_map, 16, half_circle_mask)
+    tg = gradient(t_map, 64, halfcircle_bank)
+    save_image(tg, 'Phase1', 'texture_gradient.png')
+    bg = gradient(b_map, 8, halfcircle_bank)
+    save_image(bg, 'Phase1', 'brightness_gradient.png')
+    cg = gradient(c_map, 8, halfcircle_bank)
+    save_image(cg, 'Phase1', 'color_gradient.png')
 
-    # sobel_baseline = cv2.imread('Phase1/BSDS500/SobelBaseline/1.jpg ')
-    # canny_baseline = cv2.imread('Phase1/BSDS500/CannyBaseline/1.jpg ')
+    sobel_baseline = cv2.imread('Phase1/BSDS500/SobelBaseline/1.png', cv2.IMREAD_GRAYSCALE)
+    canny_baseline = cv2.imread('Phase1/BSDS500/CannyBaseline/1.png', cv2.IMREAD_GRAYSCALE)
 
+    output = np.multiply((tg + bg + cg)/3, (0.5 * canny_baseline + 0.5 * sobel_baseline)) 
+    plot_image(output)
     """
     Read Sobel Baseline
     use command "cv2.imread(...)"
@@ -309,5 +319,4 @@ def main():
 if __name__ == '__main__':
     main()
  
-
 
