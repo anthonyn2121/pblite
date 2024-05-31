@@ -1,19 +1,5 @@
 #!/usr/bin/env python3
 
-"""
-RBE/CS549 Spring 2022: Computer Vision
-Homework 0: Alohomora: Phase 1 Starter Code
-
-Colab file can be found at:
-    https://colab.research.google.com/drive/1FUByhYCYAfpl8J9VxMQ1DcfITpY8qgsF
-
-Author(s): 
-Prof. Nitin J. Sanket (nsanket@wpi.edu), Lening Li (lli4@wpi.edu), Gejji, Vaishnavi Vivek (vgejji@wpi.edu)
-Robotics Engineering Department,
-Worcester Polytechnic Institute
-
-Code adapted from CMSC733 at the University of Maryland, College Park.
-"""
 import sys
 import os
 
