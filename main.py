@@ -2,13 +2,6 @@
 
 import sys
 import os
-
-import sklearn.cluster
-
-# Add the parent directory to the Python path to be able to use utils directory
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-# Code starts here:
 import numpy as np
 import cv2
 import sklearn
