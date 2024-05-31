@@ -137,7 +137,7 @@ def generate_gabor_filters(size:int, n_orientations:int, sigmas:list, theta:floa
             filters.append(rotate_image(g, i))
     return filters
 
-def generate_halfcircle_filters(size:list, n_orientations:int, scales:list):
+def generate_halfcircle_filters(scales:list):
     half_discs = []
     angles = [0, 180, 30, 210, 45, 225, 60, 240, 90, 270, 120, 300, 135, 315, 150, 330]           #rotation angles (not equally spaced)
     no_of_disc = len(angles)
@@ -245,7 +245,7 @@ def main():
     Display all the Half-disk masks and save image as HDMasks.png,
     use command "cv2.imwrite(...)"
     """
-    halfcircle_bank = generate_halfcircle_filters(size=[10, 45, 50], n_orientations=16, scales=[3, 10, 14])
+    halfcircle_bank = generate_halfcircle_filters(scales=[3, 10, 14])
     for n, img in enumerate(halfcircle_bank):
         save_image(img, "Phase1/HalfCircle_Filters", f'HCM{n}.png')
 
