@@ -137,6 +137,38 @@ def generate_gabor_filters(size:int, n_orientations:int, sigmas:list, theta:floa
             filters.append(rotate_image(g, i))
     return filters
 
+def generate_filter_bank():
+    orientations = 16
+    sigmas = [1, 2]
+    sizes = [17, 17]
+    # Generate Derivative of Gaussian(DoG) kernels
+    DoG_Bank = generate_DoG_bank(orientations, sigmas, sizes)
+    ## Save images
+    # for n, img in enumerate(DoG_Bank):
+    #     save_image(img, "Phase1/DoG_Filters", f'DoG{n}.png')
+
+    # Generate Leung-Malik Filter Bank: (LM)
+    LMS_bank = generate_LM_bank(49, 6, DoG_sigmas=[1, np.sqrt(2), 2],
+                                LoG_sigmas=[1, np.sqrt(2), np.sqrt(3), 2],
+                                Gauss_sigmas=[np.sqrt(2), 2, 2 * np.sqrt(2), 4])
+    ## Save images
+    # plot_subplot_images(LMS_bank, 'Phase1/LM_Filters/LMS.png', 12, 4, (12, 4))
+    
+    # LML_bank = generate_LM_bank(49, 6, DoG_sigmas=[np.sqrt(2), 2, 2 * np.sqrt(2)],
+    #                             LoG_sigmas=[2, 2*np.sqrt(2), 2 * np.sqrt(3), 4],
+    #                             Gauss_sigmas=2 * np.array([np.sqrt(2), 2, 2 * np.sqrt(2), 4]))
+    ## Save images
+    # plot_subplot_images(LML_bank, 'Phase1/LM_Filters/LML.png', 12, 4, (12, 4))
+
+    # Generate Gabor Filter Bank: (Gabor)
+    gabor_bank = generate_gabor_filters(49, 40, [3,5,7], theta = 0.25, Lambda = 1, psi = 1, gamma = 1)
+    ## Save images
+    # plot_subplot_images(gabor_bank, 'Phase1/Gabor_Filters/GB.png', nrows=5, ncols=8, figsize=(7, 7))
+
+    filter_bank = DoG_Bank + LMS_bank + gabor_bank
+    return filter_bank
+
+
 def generate_halfcircle_filters(scales:list):
     half_discs = []
     angles = [0, 180, 30, 210, 45, 225, 60, 240, 90, 270, 120, 300, 135, 315, 150, 330]           #rotation angles (not equally spaced)
@@ -204,70 +236,24 @@ def gradient(map, n_bins, hdmasks):
     return np.mean(gradient, axis=2)
 
 def main():
-
-    """
-    Generate Difference of Gaussian Filter Bank: (DoG)
-    Display all the filters in this filter bank and save image as DoG.png,
-    use command "cv2.imwrite(...)"
-    """
-    orientations = 16
-    sigmas = [1, 2]
-    sizes = [17, 17]
-    DoG_Bank = generate_DoG_bank(orientations, sigmas, sizes)
-    for n, img in enumerate(DoG_Bank):
-        save_image(img, "Phase1/DoG_Filters", f'DoG{n}.png')
-
-    """
-    Generate Leung-Malik Filter Bank: (LM)
-    Display all the filters in this filter bank and save image as LM.png,
-    use command "cv2.imwrite(...)"
-    """
-    LMS_bank = generate_LM_bank(49, 6, DoG_sigmas=[1, np.sqrt(2), 2],
-                                LoG_sigmas=[1, np.sqrt(2), np.sqrt(3), 2],
-                                Gauss_sigmas=[np.sqrt(2), 2, 2 * np.sqrt(2), 4])
-    plot_subplot_images(LMS_bank, 'Phase1/LM_Filters/LMS.png', 12, 4, (12, 4))
-    
-    LML_bank = generate_LM_bank(49, 6, DoG_sigmas=[np.sqrt(2), 2, 2 * np.sqrt(2)],
-                                LoG_sigmas=[2, 2*np.sqrt(2), 2 * np.sqrt(3), 4],
-                                Gauss_sigmas=2 * np.array([np.sqrt(2), 2, 2 * np.sqrt(2), 4]))
-    plot_subplot_images(LML_bank, 'Phase1/LM_Filters/LML.png', 12, 4, (12, 4))
-
-    """
-    Generate Gabor Filter Bank: (Gabor)
-    Display all the filters in this filter bank and save image as Gabor.png,
-    use command "cv2.imwrite(...)"
-    """
-    gabor_bank = generate_gabor_filters(49, 40, [3,5,7], theta = 0.25, Lambda = 1, psi = 1, gamma = 1)
-    plot_subplot_images(gabor_bank, 'Phase1/Gabor_Filters/GB.png', nrows=5, ncols=8, figsize=(7, 7))
-    
-    """
-    Generate Half-disk masks
-    Display all the Half-disk masks and save image as HDMasks.png,
-    use command "cv2.imwrite(...)"
-    """
     halfcircle_bank = generate_halfcircle_filters(scales=[3, 10, 14])
     for n, img in enumerate(halfcircle_bank):
         save_image(img, "Phase1/HalfCircle_Filters", f'HCM{n}.png')
 
     i = 1
-    image = cv2.imread('Phase1/BSDS500/Images/1.jpg', cv2.IMREAD_COLOR)
-    gray_image = cv2.imread('Phase1/BSDS500/Images/1.jpg', cv2.IMREAD_GRAYSCALE)
+    image = cv2.imread(f'Phase1/BSDS500/Images/{i}.jpg', cv2.IMREAD_COLOR)
+    gray_image = cv2.imread(f'Phase1/BSDS500/Images/{i}.jpg', cv2.IMREAD_GRAYSCALE)
 
-    """
-    Generate Texton Map
-    Filter image using oriented gaussian filter bank
-    """
-    # filter_bank = DoG_Bank + LMS_bank + LML_bank + gabor_bank
-    filter_bank = DoG_Bank + LMS_bank + gabor_bank
     if not os.path.isfile(f'Phase1/data/masks{i}.npy'):
+        filter_bank = generate_filter_bank()
         masks = convolve_image(gray_image, filters=filter_bank)
         np.save(f'Phase1/data/masks{i}.npy', masks, allow_pickle=True)
     elif os.path.isfile(f'Phase1/data/masks{i}.npy'):
         masks = np.load(f'Phase1/data/masks{i}.npy', allow_pickle=True)
+
     t_map = generate_texton_map(gray_image, masks, 48)
     t_map = 3 * t_map
     print('Generated texture map')
-    # plot_image(t_map, cmap='gist_rainbow')
 
     """
     Generate Brightness Map
@@ -275,7 +261,6 @@ def main():
     """
     b_map = generate_brightness_map(gray_image, 16) 
     print('Generated brightness map')
-    # plot_image(b_map, cmap='gray')
 
     """
     Generate Brightness Gradient (Bg)
@@ -285,40 +270,22 @@ def main():
     """
     c_map = generate_color_map(image, 16)
     print('Generated color map') 
-    # plot_image(c_map)
 
     """
     Perform Chi-square calculation on image
     """
     tg = gradient(t_map, 64, halfcircle_bank)
-    save_image(tg, 'Phase1', 'texture_gradient.png')
+    save_image(tg, 'Phase1/results', f'texture_gradient{i}.png')
     bg = gradient(b_map, 8, halfcircle_bank)
-    save_image(bg, 'Phase1', 'brightness_gradient.png')
+    save_image(bg, 'Phase1/results', f'brightness_gradient{i}.png')
     cg = gradient(c_map, 8, halfcircle_bank)
-    save_image(cg, 'Phase1', 'color_gradient.png')
+    save_image(cg, 'Phase1/results', f'color_gradient{i}.png')
 
-    sobel_baseline = cv2.imread('Phase1/BSDS500/SobelBaseline/1.png', cv2.IMREAD_GRAYSCALE)
-    canny_baseline = cv2.imread('Phase1/BSDS500/CannyBaseline/1.png', cv2.IMREAD_GRAYSCALE)
+    sobel_baseline = cv2.imread(f'Phase1/BSDS500/SobelBaseline/{i}.png', cv2.IMREAD_GRAYSCALE)
+    canny_baseline = cv2.imread(f'Phase1/BSDS500/CannyBaseline/{i}.png', cv2.IMREAD_GRAYSCALE)
 
     output = np.multiply((tg + bg + cg)/3, (0.5 * canny_baseline + 0.5 * sobel_baseline)) 
-    plot_image(output)
-    """
-    Read Sobel Baseline
-    use command "cv2.imread(...)"
-    """
-
-
-    """
-    Read Canny Baseline
-    use command "cv2.imread(...)"
-    """
-
-
-    """
-    Combine responses to get pb-lite output
-    Display PbLite and save image as PbLite_ImageName.png
-    use command "cv2.imwrite(...)"
-    """
+    save_image(output, 'Phase1/results/', f'output{i}.png')
     
 if __name__ == '__main__':
     main()
